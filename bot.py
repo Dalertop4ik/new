@@ -1,91 +1,41 @@
-#!/usr/bin/python
-
 import telebot
-import random
 
 API_TOKEN = '8000101066:AAHgDYk02TT0YE1wgvajXlFKht3dVaRKFCs'
-
 bot = telebot.TeleBot(API_TOKEN)
 
-# Переменная для хранения состояния режима эха
-echo_mode = True
-
-# Список шуток
-jokes = [
-    "Почему программисты предпочитают темный цвет? Потому что светлый цвет слишком много бьет по глазам!",
-    "Как программист заказывает пиццу? 'Пожалуйста, сделайте ее с 8 битами сыра!'",
-    "Почему коты не могут стать программистами? Они слишком часто теряют контекст!",
-]
-
-# Класс Car
-class Car:
-    def __init__(self, color, brand):
-        self.color = color
-        self.brand = brand
-
-    def info(self):
-        return f"This is a {self.color} {self.brand}."
-
-# Handle '/start' and '/help'
-@bot.message_handler(commands=['help', 'start'])
+@bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, """
-Hi there, I am EchoBot.
-I am here to echo your kind words back to you. Just say anything nice and I'll say the exact same thing to you!
-You can toggle echo mode with the /echo command.
-You can also ask for a joke using /joke command or get info about a car using /car command.
-""")
+    bot.reply_to(message, "Привет! Я бот, который может банить пользователей. Используйте /ban, чтобы забанить пользователя.")
 
-# Handle '/echo' command to toggle echo mode
-@bot.message_handler(commands=['echo'])
-def toggle_echo(message):
-    global echo_mode
-    echo_mode = not echo_mode
-    status = "enabled" if echo_mode else "disabled"
-    bot.reply_to(message, f"Echo mode is now {status}.")
-
-# Handle '/joke' command to tell a random joke
-@bot.message_handler(commands=['joke'])
-def tell_joke(message):
-    joke = random.choice(jokes)
-    bot.reply_to(message, joke)
-
-# Handle '/car' command to create an instance of Car
-@bot.message_handler(commands=['car'])
-def car_info(message):
-    args = message.text.split()[1:]  # Получаем аргументы после команды
-    if len(args) != 2:
-        bot.reply_to(message, "Please provide both color and brand. Usage: /car color brand")
-        return
-    
-    color, brand = args
-    my_car = Car(color, brand)
-    bot.reply_to(message, my_car.info())
-
-# Handle all other messages with content_type 'text'
-@bot.message_handler(func=lambda message: True)
-def check_message(message):
-    # Проверка на наличие ссылки в сообщении
-    if "https://" in message.text or "http://" in message.text:
-        # Сохраните информацию о пользователе (например, ID и имя)
-        user_id = message.from_user.id
-        username = message.from_user.username
+@bot.message_handler(commands=['ban'])
+def ban_user(message):
+    if message.reply_to_message:  
+        chat_id = message.chat.id 
+        user_id = message.reply_to_message.from_user.id
+        user_status = bot.get_chat_member(chat_id, user_id).status 
         
-        # Логирование информации о пользователе
-        print(f"Бан пользователя {username} (ID: {user_id}) за отправку ссылки.")
-        
-        # Бан пользователя (вы можете использовать метод для бана пользователя)
-        try:
-            bot.kick_chat_member(message.chat.id, user_id)
-            # Информирование пользователя о бане
-            bot.send_message(message.chat.id, f"Пользователь @{username} был забанен за отправку ссылки.")
-        except Exception as e:
-            print(f"Ошибка при попытке забанить пользователя: {e}")
-    else:
-        # Эхо-ответ на сообщение
-        if echo_mode:
-            bot.reply_to(message, message.text)
+        if user_status == 'administrator' or user_status == 'creator':
+            bot.reply_to(message, "Невозможно забанить администратора.")
         else:
-            bot.reply_to(message, "Echo mode is disabled. Send /echo to enable it.")
+            bot.ban_chat_member(chat_id, user_id)
+            bot.reply_to(message, f"Пользователь {user_id} был забанен.")
+    else:
+        bot.reply_to(message, "Пожалуйста, ответьте на сообщение пользователя, которого хотите забанить.")
 
-bot.infinity_polling()
+@bot.message_handler(func=lambda message: True)
+def handle_all_messages(message):
+    if message.text and "https://" in message.text:
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+        user_status = bot.get_chat_member(chat_id, user_id).status
+        
+        if user_status != 'administrator' and user_status != 'creator':
+            bot.ban_chat_member(chat_id, user_id)
+            bot.reply_to(message, f"Пользователь {message.from_user.username} был забанен за отправку ссылки.")
+        else:
+            bot.reply_to(message, "Администраторов нельзя банить.")
+
+if __name__ == '__main__':
+    print("Бот запущен...")
+    bot.polling(none_stop=True)
+
