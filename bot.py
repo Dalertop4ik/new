@@ -7,6 +7,16 @@ bot = telebot.TeleBot(API_TOKEN)
 def send_welcome(message):
     bot.reply_to(message, "Привет! Я бот, который может банить пользователей. Используйте /ban, чтобы забанить пользователя.")
 
+@bot.message_handler(commands=['help'])
+def send_help(message):
+    bot.reply_to(message, "Доступные команды:\n/start - приветствие\n/ban - забанить пользователя\n/help - список команд")
+   
+
+@bot.message_handler(content_types=['new_chat_members'])
+def make_some(message):
+    bot.send_message(message.chat.id, 'Я принял нового пользователя!')
+    bot.approve_chat_join_request(message.chat.id, message.from_user.id)
+
 @bot.message_handler(commands=['ban'])
 def ban_user(message):
     if message.reply_to_message:  
@@ -21,6 +31,18 @@ def ban_user(message):
             bot.reply_to(message, f"Пользователь {user_id} был забанен.")
     else:
         bot.reply_to(message, "Пожалуйста, ответьте на сообщение пользователя, которого хотите забанить.")
+
+@bot.message_handler(commands=['unban'])
+def unban_user(message):
+    if message.reply_to_message:
+        chat_id = message.chat.id
+        user_id = message.reply_to_message.from_user.id
+        bot.unban_chat_member(chat_id, user_id)
+        bot.reply_to(message, f"Пользователь {user_id} был разблокирован.")
+    else:
+        bot.reply_to(message, "Пожалуйста, ответьте на сообщение пользователя, которого хотите разблокировать.")
+   
+
 
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
@@ -38,4 +60,5 @@ def handle_all_messages(message):
 if __name__ == '__main__':
     print("Бот запущен...")
     bot.polling(none_stop=True)
+
 
