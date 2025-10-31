@@ -64,10 +64,28 @@ def car_info(message):
 
 # Handle all other messages with content_type 'text'
 @bot.message_handler(func=lambda message: True)
-def echo_message(message):
-    if echo_mode:
-        bot.reply_to(message, message.text)
+def check_message(message):
+    # Проверка на наличие ссылки в сообщении
+    if "https://" in message.text or "http://" in message.text:
+        # Сохраните информацию о пользователе (например, ID и имя)
+        user_id = message.from_user.id
+        username = message.from_user.username
+        
+        # Логирование информации о пользователе
+        print(f"Бан пользователя {username} (ID: {user_id}) за отправку ссылки.")
+        
+        # Бан пользователя (вы можете использовать метод для бана пользователя)
+        try:
+            bot.kick_chat_member(message.chat.id, user_id)
+            # Информирование пользователя о бане
+            bot.send_message(message.chat.id, f"Пользователь @{username} был забанен за отправку ссылки.")
+        except Exception as e:
+            print(f"Ошибка при попытке забанить пользователя: {e}")
     else:
-        bot.reply_to(message, "Echo mode is disabled. Send /echo to enable it.")
+        # Эхо-ответ на сообщение
+        if echo_mode:
+            bot.reply_to(message, message.text)
+        else:
+            bot.reply_to(message, "Echo mode is disabled. Send /echo to enable it.")
 
 bot.infinity_polling()
